@@ -1,0 +1,739 @@
+import { useState, useRef, useEffect, Component } from "react";
+
+/* ── Blueprint · Policybazaar internal knowledge layer ──
+   v3: live JIRA index (200 issues synced via Rovo MCP across PHOEN/POSP/PBPAR/PD),
+   JIRA writes locked to simulation, frontend changes render sample UI previews. */
+
+const JIRAS = [{"k": "PHOEN-57", "p": "PHOEN", "t": "Define API structure and Publish API", "s": "Awaiting QA", "a": "Aman", "y": "Story"}, {"k": "PHOEN-85", "p": "PHOEN", "t": "Calling Campaign Engine \u2014 v1.1 Release", "s": "Dev In Progress", "a": "\u2014", "y": "Task"}, {"k": "PHOEN-70", "p": "PHOEN", "t": "Phoenix Partner List \u2014 PartnerCallback Label & Manual Callback Visibility", "s": "Dev In Progress", "a": "Aman", "y": "Story"}, {"k": "PHOEN-58", "p": "PHOEN", "t": "Data management and Assignment", "s": "Dev In Progress", "a": "Aman", "y": "Story"}, {"k": "PHOEN-81", "p": "PHOEN", "t": "Bottoms-Up Planning for VRMs \u2014 Replicate RM App Flow on Phoenix", "s": "Requirement Phase", "a": "\u2014", "y": "Task"}, {"k": "PHOEN-73", "p": "PHOEN", "t": "Disposition Mandatory on Connected Calls \u2014 Motor", "s": "Requirement Phase", "a": "\u2014", "y": "Story"}, {"k": "PHOEN-77", "p": "PHOEN", "t": "Limit on Onboarding Assignment for new Organic bucket tasks", "s": "Requirement Phase", "a": "Akash", "y": "Task"}, {"k": "PHOEN-84", "p": "PHOEN", "t": "Partner 360 for VRM/SVRMs on Phoenix Web", "s": "Requirement Phase", "a": "\u2014", "y": "Task"}, {"k": "PHOEN-69", "p": "PHOEN", "t": "Disposition Popup \u2013 Unverified Number Verification CTA", "s": "Requirement Phase", "a": "Sandesh", "y": "Story"}, {"k": "PHOEN-68", "p": "PHOEN", "t": "Phoenix Integration \u2013 Number Management Panel CTA", "s": "Requirement Phase", "a": "Sandesh", "y": "Story"}, {"k": "PHOEN-22", "p": "PHOEN", "t": "Abandon Call visibility in Phoenix v2", "s": "Done", "a": "Akash", "y": "Task"}, {"k": "PHOEN-86", "p": "PHOEN", "t": "Phoenix - SLA Priority Bucket for 15-Min Call SLA Enforcement (Onboarding)", "s": "Awaiting Dev", "a": "Akash", "y": "Task"}, {"k": "PBPAR-751", "p": "PBPAR", "t": "SME/HOME- App-  Copy url option on the checkout page", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PD-735", "p": "PD", "t": "Express SAOD", "s": "In Progress Design", "a": "Tishika", "y": "Task"}, {"k": "PD-738", "p": "PD", "t": "Design Exploration \u2013 Comprehensive Policy Upsell on TP Quotes Page", "s": "TO-DO", "a": "Gaurav", "y": "Task"}, {"k": "PD-737", "p": "PD", "t": "Robots updation and phone number encryption logic change", "s": "TO-DO", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-737", "p": "PBPAR", "t": "Endorsement Ticket Status Sync Tasks", "s": "Awaiting Dev", "a": "Naman", "y": "Task"}, {"k": "PD-718", "p": "PD", "t": "DMS <> Rev Connect", "s": "In Review", "a": "Vikas", "y": "Task"}, {"k": "PD-734", "p": "PD", "t": "IP Renewal Page: Announcement Banner feature", "s": "In Review", "a": "shubhamparihar", "y": "Task"}, {"k": "POSP-2713", "p": "POSP", "t": "Offline to Online CJ Integration for CV", "s": "DRAFT", "a": "Abhishek", "y": "Story"}, {"k": "PD-727", "p": "PD", "t": "Regional Conclave Leaderboard ( For FOS and VRM )", "s": "Done (Ready for Dev)", "a": "shubhamparihar", "y": "Story"}, {"k": "PD-631", "p": "PD", "t": "Customer KYC | MRP", "s": "Done (Ready for Dev)", "a": "Sourav", "y": "Task"}, {"k": "PD-731", "p": "PD", "t": "QMS- SME(CL) Project- Insurer KAM- User- Persona", "s": "TO-DO", "a": "Tishika", "y": "Task"}, {"k": "PD-715", "p": "PD", "t": "Partners-partner-payment-link", "s": "In Review", "a": "shreymistry", "y": "Task"}, {"k": "PD-717", "p": "PD", "t": "Make my Quote", "s": "In Review", "a": "shreymistry", "y": "Task"}, {"k": "PD-728", "p": "PD", "t": "HTML Development for Skip Selfie Part", "s": "In Progress HTML", "a": "Rajendra", "y": "Task"}, {"k": "PD-705", "p": "PD", "t": "UI/UX Improvements Across Term CJ Mobile", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Sub-task"}, {"k": "PD-722", "p": "PD", "t": "Term: UI / UX design for Multi Quotes screen", "s": "In Progress HTML", "a": "Rajendra", "y": "Task"}, {"k": "PD-723", "p": "PD", "t": "Modifications in Offline Quote - Figma Link", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PD-701", "p": "PD", "t": "Number management project: Changes on Caller end, Number Management Module and", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-750", "p": "PBPAR", "t": "Marine Bajaj- Commodity names update", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PD-730", "p": "PD", "t": "QMS- SME(CL) Project- Partner and RM User- Persona", "s": "TO-DO", "a": "Tishika", "y": "Task"}, {"k": "PD-733", "p": "PD", "t": "IP Homepage Clutter Fix", "s": "Done (Ready for Dev)", "a": "Ayush", "y": "Task"}, {"k": "PD-724", "p": "PD", "t": "Modal for Training Attendance Capturing ", "s": "In Review", "a": "Deepak", "y": "Task"}, {"k": "PHOEN-76", "p": "PHOEN", "t": "Field addition for Phoenix Onboarding Report", "s": "DRAFT", "a": "\u2014", "y": "Task"}, {"k": "PHOEN-80", "p": "PHOEN", "t": "Delay in Onboarding Task Creation for Task Type \u2014 FreshCampaign (15-min Delay)", "s": "Done", "a": "Akash", "y": "Task"}, {"k": "PHOEN-72", "p": "PHOEN", "t": "Removal of TP only and CV policy renewals from Phoenix task creation", "s": "Done", "a": "\u2014", "y": "Task"}, {"k": "PHOEN-28", "p": "PHOEN", "t": "Calling Campaign Engine Project for Phoenix", "s": "Done", "a": "Aman", "y": "Task"}, {"k": "PHOEN-55", "p": "PHOEN", "t": "Health FOS Cross - Team activation on Phoenix v2", "s": "Done", "a": "Shubeen", "y": "Task"}, {"k": "PHOEN-54", "p": "PHOEN", "t": "Pushing Partner Score and Campaign related fields to Unify", "s": "Done", "a": "Aman", "y": "Task"}, {"k": "POSP-2746", "p": "POSP", "t": "Dialer Integration for Revconnect", "s": "DRAFT", "a": "Amit", "y": "Story"}, {"k": "POSP-2736", "p": "POSP", "t": "BD tickets requirements", "s": "Done", "a": "Akash", "y": "Task"}, {"k": "PBPAR-621", "p": "PBPAR", "t": "Home- Reliance- Show \"Terrorism Cover Included\" under Add ons section on the q", "s": "Awaiting QA", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-723", "p": "PBPAR", "t": "Audit Trail fix", "s": "In Testing (QA)", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-716", "p": "PBPAR", "t": "SME - Show the error on the checkout page ", "s": "In Progress (Dev)", "a": "Nishant", "y": "Task"}, {"k": "POSP-2745", "p": "POSP", "t": "CAPTURING INR IN POSP DB FOR DOLLAR PRODUCT", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "PD-732", "p": "PD", "t": "Term: Proposal form HTML creation", "s": "TO-DO", "a": "Vineet", "y": "Task"}, {"k": "PBPAR-617", "p": "PBPAR", "t": "WC- \"Bajaj- Risk location- Gujarat is included \"\"EXT_FIELD3\"\": \"\"Multiple risk", "s": "In Backlog", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-749", "p": "PBPAR", "t": "Addition of columns in the Dashboard Bulk Download", "s": "In Backlog", "a": "Naman", "y": "Task"}, {"k": "PD-729", "p": "PD", "t": "TMS Phase 1 for RAP & KPI", "s": "In Progress Design", "a": "pavitrakumarp", "y": "Story"}, {"k": "PD-721", "p": "PD", "t": "PBPOne AyushPay Benefit Section Creation", "s": "In Review", "a": "shubhamparihar", "y": "Task"}, {"k": "PD-708", "p": "PD", "t": "View Detail CTA on web", "s": "In Review", "a": "Sneha", "y": "Story"}, {"k": "PD-633", "p": "PD", "t": "PBPOne  Design Revamp", "s": "In Review", "a": "shubhamparihar", "y": "Task"}, {"k": "PD-651", "p": "PD", "t": "Incorporate Partner360 requirements for VRM and PBPMitra in current design", "s": "In Review", "a": "vishalluthra", "y": "Sub-task"}, {"k": "PD-720", "p": "PD", "t": "M0-M3  & M3+ Design version", "s": "In Review", "a": "Sneha", "y": "Sub-task"}, {"k": "POSP-2744", "p": "POSP", "t": "Rhobots Go Live Related Tasks", "s": "DRAFT", "a": "Sachin", "y": "Task"}, {"k": "POSP-2728", "p": "POSP", "t": "Number Management Panel \u2013 Central Dashboard", "s": "DRAFT", "a": "Sandesh", "y": "Story"}, {"k": "POSP-2726", "p": "POSP", "t": "Make a Call Popup \u2013 Add & Call Form", "s": "DRAFT", "a": "Sandesh", "y": "Story"}, {"k": "POSP-2717", "p": "POSP", "t": "Alternate number and email ID management architecture changes for Partners ", "s": "DRAFT", "a": "Sandesh", "y": "Story"}, {"k": "POSP-2725", "p": "POSP", "t": "Partner Number Management - Caller and Partner side changes and Central Number", "s": "DRAFT", "a": "Sandesh", "y": "Epic"}, {"k": "PBPAR-712", "p": "PBPAR", "t": "Replace the usage of hardcoded usertypeid checks with dynamic permission strin", "s": "Awaiting QA", "a": "Prabhat", "y": "Task"}, {"k": "PHOEN-78", "p": "PHOEN", "t": "Unify end  issues", "s": "Done", "a": "vishalluthra", "y": "Bug"}, {"k": "POSP-2743", "p": "POSP", "t": "UI break when call history side bar in and out", "s": "DRAFT", "a": "Rajendra", "y": "Bug"}, {"k": "PBPAR-738", "p": "PBPAR", "t": "Marine- Check if we can select the future date in the invoice date and impleme", "s": "Awaiting Release", "a": "Nishant", "y": "Task"}, {"k": "POSP-2737", "p": "POSP", "t": "Open Existing Raised Tickets Directly from PBPMitra Page via GetTicketURL API", "s": "DRAFT", "a": "Abhishek", "y": "Task"}, {"k": "PBPAR-748", "p": "PBPAR", "t": "User Details and Assignment Audit Logs", "s": "In Progress (Dev)", "a": "Naman", "y": "Task"}, {"k": "PBPAR-747", "p": "PBPAR", "t": "SME- Check KYC flow- document upload (Indv. Corporate, and Proprietorship)", "s": "In Backlog", "a": "Prabhat", "y": "Task"}, {"k": "PD-726", "p": "PD", "t": "Article section and homepage changes", "s": "In Progress HTML", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-746", "p": "PBPAR", "t": "Marine/WC- Digit- Check in Identity proof if we can use GST ", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PD-643", "p": "PD", "t": "Endorsement and Installment Page Creation ", "s": "In Review", "a": "Akash", "y": "Task"}, {"k": "PD-725", "p": "PD", "t": "CLONE - Endorsement and Installment Page Creation", "s": "TO-DO", "a": "tanujsharma", "y": "Task"}, {"k": "PBPAR-745", "p": "PBPAR", "t": "Home- Give Continue journey option in the leads section", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-631", "p": "PBPAR", "t": "Marine- Remove PB Partners logo from the quote pdf for containers to and fro", "s": "Blocked", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-740", "p": "PBPAR", "t": "Endorsement: AmyGB API integration for Doc Classifier", "s": "In Progress (Dev)", "a": "Shubham", "y": "Task"}, {"k": "PBPAR-744", "p": "PBPAR", "t": "Marine/SME- ICICI- Doc upload error (prod error)", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-735", "p": "PBPAR", "t": "Marine- ICICI- Rates change", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-721", "p": "PBPAR", "t": "Marine- OTE to E2E Journey- Edit your search> Import/Export Invoice value does", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-722", "p": "PBPAR", "t": "WC- Bajaj- Premium calculation error, current calculation is being calculated ", "s": "Blocked", "a": "Rishika", "y": "Task"}, {"k": "PBPAR-702", "p": "PBPAR", "t": "Home- Bajaj- pincode issue again showing (122001), premium mismatch is also th", "s": "Blocked", "a": "Rishika", "y": "Task"}, {"k": "PBPAR-743", "p": "PBPAR", "t": "SME/HOME- Occupancy API", "s": "In Progress (Dev)", "a": "Nishant", "y": "Task"}, {"k": "PD-691", "p": "PD", "t": "Nivesh Mitra - Design Revamp", "s": "In Review", "a": "Vikas", "y": "Task"}, {"k": "POSP-2742", "p": "POSP", "t": "Ingest and Publish Kafka Event for Health Renewal Bookings", "s": "Awaiting Dev", "a": "Sachin", "y": "Task"}, {"k": "PD-676", "p": "PD", "t": "Malamaal Weekly- Design", "s": "In Review", "a": "shubhamparihar", "y": "Story"}, {"k": "PBPAR-736", "p": "PBPAR", "t": "ICICI- Add Aadhaar option for doc upload", "s": "In Testing (QA)", "a": "Nishant", "y": "Task"}, {"k": "PHOEN-83", "p": "PHOEN", "t": "Renewal Page Redirect from Partner Renewal Page on Unify", "s": "DRAFT", "a": "\u2014", "y": "Story"}, {"k": "PD-719", "p": "PD", "t": "POSP Motor Claim Dashboard UI", "s": "TO-DO", "a": "Vineet", "y": "Task"}, {"k": "PD-710", "p": "PD", "t": "Used car flow | Landing page changes", "s": "In Review", "a": "Sourav", "y": "Task"}, {"k": "PD-712", "p": "PD", "t": "Pay as your drive | New Plan", "s": "In Review", "a": "Sourav", "y": "Task"}, {"k": "PBPAR-733", "p": "PBPAR", "t": "Implement server side sorting for dashboard claims", "s": "Awaiting QA", "a": "Prabhat", "y": "Task"}, {"k": "PHOEN-82", "p": "PHOEN", "t": "Notification Panel \u2014 Quote Request Events (Created, Shared, Accepted, Declined", "s": "DRAFT", "a": "\u2014", "y": "Story"}, {"k": "PD-711", "p": "PD", "t": "Valuation Doc based inspection ", "s": "In Review", "a": "Tishika", "y": "Task"}, {"k": "POSP-2732", "p": "POSP", "t": "Add \"Ticket ID\" in Reference Category dropdown for PBP Mitra team", "s": "DRAFT", "a": "Abhishek", "y": "Task"}, {"k": "POSP-2741", "p": "POSP", "t": "Addition of Policy number field for both standard and installment endorsement ", "s": "DRAFT", "a": "Sachin", "y": "Task"}, {"k": "PD-707", "p": "PD", "t": "CPA Upsell on Summary/Quote/TY", "s": "In Review", "a": "shreymistry", "y": "Task"}, {"k": "PBPAR-742", "p": "PBPAR", "t": "Endorsement Integrations: Non Financial Fields Royal Sundaram", "s": "In Backlog", "a": "Amit", "y": "Task"}, {"k": "PBPAR-741", "p": "PBPAR", "t": "Endorsement: Agent Code to be shown in logs", "s": "In Backlog", "a": "Amit", "y": "Task"}, {"k": "PD-713", "p": "PD", "t": "Policy Service Page ", "s": "In Review", "a": "Sourav", "y": "Task"}, {"k": "PBPAR-739", "p": "PBPAR", "t": "Dashboard issues", "s": "In Backlog", "a": "Manish", "y": "Task"}, {"k": "PD-684", "p": "PD", "t": "Motor Claim application upgrade  fixes", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PD-704", "p": "PD", "t": "Disease Selection in Rider Sections || Health", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PHOEN-79", "p": "PHOEN", "t": "Abandoned Call feature is not displaying on the Task Page and Call History eve", "s": "Done", "a": "Akash", "y": "Bug"}, {"k": "POSP-2738", "p": "POSP", "t": "User_id showing 'NULL' in 'crm_abandoned_calls' table", "s": "Done", "a": "Amit", "y": "Bug"}, {"k": "POSP-2719", "p": "POSP", "t": "Google Tag Manager(GTM) Integration for Offline Quotes", "s": "Done", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-200", "p": "PBPAR", "t": "RSA | Endorsement API Integration", "s": "In Testing (QA)", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-734", "p": "PBPAR", "t": "PbMitra - Comment to be shown by PbMitra Agent at the Claims Portal", "s": "In Backlog", "a": "Amit", "y": "Task"}, {"k": "PD-689", "p": "PD", "t": "UI/UX Improvements Across Term CJ (Web & Mobile)", "s": "Done (Ready for Dev)", "a": "Aashish", "y": "Task"}, {"k": "POSP-2740", "p": "POSP", "t": "Require RM wise (secondary and primary )partners drop down on the OTE page whi", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "PD-716", "p": "PD", "t": "Chat based Support ", "s": "TO-DO", "a": "\u2014", "y": "Task"}, {"k": "PD-709", "p": "PD", "t": "Taxi changes | Pre-fill page", "s": "In Review", "a": "Sourav", "y": "Task"}, {"k": "PD-697", "p": "PD", "t": "Cashless Claim Guarantee | Private car", "s": "In Review", "a": "Sourav", "y": "Task"}, {"k": "POSP-2739", "p": "POSP", "t": "Offline Mapping ", "s": "DRAFT", "a": "Sachin", "y": "Task"}, {"k": "POSP-2735", "p": "POSP", "t": "Putting server level Redirects across pbpartners domain", "s": "DRAFT", "a": "Parveen", "y": "Task"}, {"k": "PD-414", "p": "PD", "t": "Partner-360: Partner Page Modification", "s": "In Progress HTML", "a": "Rajendra", "y": "Task"}, {"k": "PD-699", "p": "PD", "t": "Articles section changes for Updated portal", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PD-698", "p": "PD", "t": "Short-Term OD | Design", "s": "In Review", "a": "Sourav", "y": "Task"}, {"k": "PBPAR-430", "p": "PBPAR", "t": "WC- Digit API reintegration", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-725", "p": "PBPAR", "t": "Marine- Make the BL/AWB/LR/RR Date field editable", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-697", "p": "PBPAR", "t": "Marine- Quote PDF changes", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-729", "p": "PBPAR", "t": "Marine- Digit Allow Numeric value in the Insured Name field", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PD-657", "p": "PD", "t": "CJ Quotes on Offline Quote Flow Motor CV ", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-732", "p": "PBPAR", "t": "Setup Entity Framework for Using DB in Claims along with .Net10 Upgrade", "s": "In Progress (Dev)", "a": "Naman", "y": "Task"}, {"k": "PBPAR-641", "p": "PBPAR", "t": "WC- Edit your search- Business type> Sub category option not available", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PD-702", "p": "PD", "t": "Updates in Onboarding Backend Admin Design", "s": "In Review", "a": "Deepak", "y": "Task"}, {"k": "PD-714", "p": "PD", "t": "Chat Support ", "s": "TO-DO", "a": "\u2014", "y": "Task"}, {"k": "PD-706", "p": "PD", "t": "Articles Section changes ", "s": "In Progress HTML", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-731", "p": "PBPAR", "t": "Create test users for claim portal", "s": "In Backlog", "a": "Manish", "y": "Task"}, {"k": "PBPAR-703", "p": "PBPAR", "t": "Marine- CJ GA", "s": "In Progress (Dev)", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-710", "p": "PBPAR", "t": "WC- ICICI Pan India Loading", "s": "In Progress (Dev)", "a": "Nishant", "y": "Task"}, {"k": "PHOEN-75", "p": "PHOEN", "t": "Absenteeism Logic \u2014 Temporary VRM/SVRM Assignment for Absent or Logged-Out Use", "s": "DRAFT", "a": "\u2014", "y": "Story"}, {"k": "PHOEN-74", "p": "PHOEN", "t": "Call Button Replacement & Repositioning on Phoenix", "s": "DRAFT", "a": "\u2014", "y": "Story"}, {"k": "PD-696", "p": "PD", "t": "KYC Loader", "s": "In Review", "a": "shreymistry", "y": "Task"}, {"k": "PBPAR-730", "p": "PBPAR", "t": "Marine- Only show Aadhar option for Individual and GST for Commercial", "s": "Blocked", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-655", "p": "PBPAR", "t": "ICICI- WC prod automation", "s": "In Progress (Dev)", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-597", "p": "PBPAR", "t": "The document field mappings for the motor endorsement checklist are incorrect ", "s": "In Testing (QA)", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-690", "p": "PBPAR", "t": "Partner code to be passed which will serve the functionality for PbMitra Claim", "s": "Closed", "a": "Manish", "y": "Task"}, {"k": "PBPAR-727", "p": "PBPAR", "t": "Marine- Reduce the Min. SI value to 5000 from 10000 for all the Insurers", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-705", "p": "PBPAR", "t": "Marine - Commodities and rates", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-728", "p": "PBPAR", "t": "Claim Details UI changes", "s": "Awaiting Dev", "a": "Naman", "y": "Sub-task"}, {"k": "PBPAR-706", "p": "PBPAR", "t": "Claim Details Summary- Revamp", "s": "In Progress (Dev)", "a": "Shubham", "y": "Epic"}, {"k": "PD-703", "p": "PD", "t": "Robots file updation and dynamic sitemap", "s": "Done (Ready for Dev)", "a": "Gaurav", "y": "Task"}, {"k": "PBPAR-681", "p": "PBPAR", "t": "Claim Dashboard- Revamp", "s": "Closed", "a": "Shubham", "y": "Epic"}, {"k": "PBPAR-708", "p": "PBPAR", "t": "Restrict the Inbound Search Option. Also while raising the new claim then show", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PBPAR-685", "p": "PBPAR", "t": "User-Wise Visibilty", "s": "Closed", "a": "Manish", "y": "Task"}, {"k": "PBPAR-684", "p": "PBPAR", "t": "Assign to Me- Functionality-> Restrcited for Agents View, Claim Source Selecti", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PBPAR-683", "p": "PBPAR", "t": "Email ID Search Option (Partner/RM/Preferred Email ID)", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PBPAR-682", "p": "PBPAR", "t": "Buckets Logic- With Addition/Modification of New Buckets", "s": "Closed", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-502", "p": "PBPAR", "t": "Remarks while assigning case to Insurer SPOC/Surveyor", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PBPAR-513", "p": "PBPAR", "t": "Manual Assignment of Insurer-SPOC to happen by CRT Agent", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PD-700", "p": "PD", "t": "Html fixes for Partner Chat on Partner Web", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-580", "p": "PBPAR", "t": "Marine- Refresh button- off after case is closed", "s": "In Backlog", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-724", "p": "PBPAR", "t": "WC- ICICI- Quote page and Check out page premium mismatch (production error)", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-726", "p": "PBPAR", "t": "Marine- OTE to CJ Page not found error", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "POSP-2734", "p": "POSP", "t": "Offline mapping api to be implement in app", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "PHOEN-66", "p": "PHOEN", "t": "Unify end issues List - Health Activation", "s": "Done", "a": "vishalluthra", "y": "Bug"}, {"k": "PBPAR-628", "p": "PBPAR", "t": "SME- Bajaj- Doc upload", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PD-675", "p": "PD", "t": "MMV Management Dashboard \u2013 Final UX Flow (CJ Data Aligned)", "s": "In Review", "a": "Aditya", "y": "Task"}, {"k": "POSP-2733", "p": "POSP", "t": "Testing: pbpartner.com", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "PD-687", "p": "PD", "t": "DTD info on Product page", "s": "Done (Ready for Dev)", "a": "Aman", "y": "Sub-task"}, {"k": "PD-690", "p": "PD", "t": "Additional Changes in Expanded Transactional view", "s": "Done (Ready for Dev)", "a": "Vijaya", "y": "Sub-task"}, {"k": "PD-685", "p": "PD", "t": "SME- Quote not available page design", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "POSP-2712", "p": "POSP", "t": "RM Report Column Addition: Hierarchy Web", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "PD-692", "p": "PD", "t": "Additional changes to Articles section", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "PBPAR-525", "p": "PBPAR", "t": "Marine-ICICI- Import/Export integration", "s": "Awaiting QA", "a": "Nishant", "y": "Task"}, {"k": "PD-693", "p": "PD", "t": "Term on Motor", "s": "In Review", "a": "Ankit", "y": "Task"}, {"k": "PHOEN-63", "p": "PHOEN", "t": "User unable to click on 'Call History', 'Utility' button on Agent Workspace, T", "s": "Done", "a": "Akash", "y": "Bug"}, {"k": "PHOEN-71", "p": "PHOEN", "t": "Dialer Team - Error message shown while making an OB call", "s": "Done", "a": "Akash", "y": "Bug"}, {"k": "PD-622", "p": "PD", "t": "Partner 360: Enhancement", "s": "In Review", "a": "Sneha", "y": "Story"}, {"k": "PHOEN-60", "p": "PHOEN", "t": "[Phase 2] C2C Trigger & Auto Screen Pop on User's Phoenix", "s": "DRAFT", "a": "\u2014", "y": "Story"}, {"k": "PHOEN-59", "p": "PHOEN", "t": "[Phase 2] Scheduling Engine & User Availability Check", "s": "DRAFT", "a": "\u2014", "y": "Story"}, {"k": "PHOEN-56", "p": "PHOEN", "t": "Centralized Callback Request API for Partners", "s": "DRAFT", "a": "Sandesh", "y": "Epic"}, {"k": "PHOEN-53", "p": "PHOEN", "t": "Renewal page visit to be integrated using GA", "s": "Awaiting Dev", "a": "Akash", "y": "Task"}, {"k": "PHOEN-29", "p": "PHOEN", "t": "Real time scoring for Phoenix - Motor Renewals", "s": "Awaiting Dev", "a": "Akash", "y": "Task"}, {"k": "PHOEN-52", "p": "PHOEN", "t": "Call logs in Phoenix v1", "s": "Done", "a": "Akash", "y": "Task"}, {"k": "PHOEN-51", "p": "PHOEN", "t": "Implement Daily Job to Resolve Missing Health Renewal Tasks in Phoenix Portal ", "s": "Done", "a": "Akash", "y": "Task"}, {"k": "PHOEN-11", "p": "PHOEN", "t": "Phoenix Implementation - Motor Dual role VRM group", "s": "Done", "a": "Shubeen", "y": "Task"}, {"k": "POSP-2729", "p": "POSP", "t": "Number Management Panel \u2013 Add New Number Form", "s": "DRAFT", "a": "Sandesh", "y": "Story"}, {"k": "PD-648", "p": "PD", "t": "Changes in T&C Revamp", "s": "In Review", "a": "Ayush", "y": "Task"}, {"k": "PD-695", "p": "PD", "t": "Create a multiyear plan view with CPA selection option as well", "s": "TO-DO", "a": "\u2014", "y": "Task"}, {"k": "PD-694", "p": "PD", "t": "[Design/Marketing] HTML personalized partner QR scanner template (QR, name, mo", "s": "TO-DO", "a": "shreymistry", "y": "Story"}, {"k": "POSP-2724", "p": "POSP", "t": "Health Ticket Issues", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "POSP-2589", "p": "POSP", "t": "MRP Tag || Offline Quote Request Creation Page", "s": "DRAFT", "a": "Sachin", "y": "Task"}, {"k": "POSP-2723", "p": "POSP", "t": "Life Ticketing Enable at Front End of POSP", "s": "DRAFT", "a": "Sandesh", "y": "Story"}, {"k": "PHOEN-64", "p": "PHOEN", "t": "Partner not grayed out after booking", "s": "Done", "a": "Akash", "y": "Bug"}, {"k": "PHOEN-62", "p": "PHOEN", "t": "Target not updated for user after Import Targets from Dev login", "s": "Done", "a": "Akash", "y": "Bug"}, {"k": "PBPAR-696", "p": "PBPAR", "t": "Marine- Allow decimal values under the invoice value for import and export", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PHOEN-65", "p": "PHOEN", "t": "Security issue - PartnerID Exposed in URL (Should Be Encrypted)", "s": "DRAFT", "a": "Akash", "y": "Bug"}, {"k": "PHOEN-61", "p": "PHOEN", "t": "User unable to navigate subtask lead page.", "s": "Done", "a": "Akash", "y": "Bug"}, {"k": "PBPAR-654", "p": "PBPAR", "t": "Conditional address required validation for API", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PBPAR-665", "p": "PBPAR", "t": "Surveyor Panel- Inspection Mode- Changes", "s": "Closed", "a": "Naman", "y": "Task"}, {"k": "PBPAR-717", "p": "PBPAR", "t": "WC- Bajaj- Check the premium calculation (how premium is calculated 522 Rs. be", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-719", "p": "PBPAR", "t": "Marine- Design for get quote page", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-694", "p": "PBPAR", "t": "Marine Bajaj Import changes", "s": "In Testing (QA)", "a": "Prabhat", "y": "Task"}, {"k": "PBPAR-720", "p": "PBPAR", "t": "Check the blank page issue for all devices", "s": "Blocked", "a": "Nishant", "y": "Task"}, {"k": "PBPAR-714", "p": "PBPAR", "t": "Marine Digit Prod issues", "s": "Closed", "a": "Nishant", "y": "Task"}, {"k": "POSP-2722", "p": "POSP", "t": "Offline Quote Automation || Data Capturing", "s": "DRAFT", "a": "Sandesh", "y": "Task"}, {"k": "PD-558", "p": "PD", "t": "Upgrade of Joomla 4 to 5 and page speed optimization", "s": "Done (Ready for Dev)", "a": "Rajendra", "y": "Task"}, {"k": "POSP-2720", "p": "POSP", "t": "Motor Target Upload sheet update", "s": "Awaiting PROD", "a": "Akash", "y": "Story"}, {"k": "PBPAR-715", "p": "PBPAR", "t": "Lead ID- 1148062269 Not showing Sale complete in Booking Table, But showing Sa", "s": "In Backlog", "a": "Shubham", "y": "Task"}, {"k": "PBPAR-701", "p": "PBPAR", "t": "Marine- OTE to E2E bugs", "s": "In Backlog", "a": "Rishika", "y": "Task"}, {"k": "PBPAR-709", "p": "PBPAR", "t": "Marine- Digit quotes are not showing on quote page ", "s": "Closed", "a": "Nishant", "y": "Task"}];
+
+const JIRA_CTX = JIRAS.map(j => j.k + "|" + j.s + "|" + String(j.t).slice(0, 60)).join("\n");
+
+const CODEBASE = `
+INDEXED SOURCES — Blueprint knowledge layer (Policybazaar / PBPartners)
+
+[phoenix-web · React] [phoenix-api · Java] Phoenix CRM — VRM/SVRM workbench.
+Modules + status: Partner 360 (PHOEN-84, in dev — profile APIs owner Tanuj; partner contact data via POSP tickets w/ Sandesh Singh, Ayush Batra), Calling Campaign Engine v1.1 (PHOEN-85 — bucket-based queues, 15-min call SLA tracked but NO proactive breach alert yet; 12-min warning is an open feature pending solution alignment), Renewal redirect Unify→Partner360 (PHOEN-83 — live for motor), Notification panel for quote lifecycle (PHOEN-82), Bottoms-up planning for VRMs (PHOEN-81), Disposition framework (L1/L2 taxonomy, mandatory unclosable post-call modal, write-once per call).
+[pbpmitra-app · Flutter] Partner (POSP) app — ticketing (flow owner Asmit), endorsement status, commission view. VRM-chat web notifications: deferred, not specced.
+[amigo-core · Python] Amigo Bot — partner assistant. Intents: policy info, commission, ticket status. Latency telemetry exists; calculation methodology undocumented.
+[voicebot · transcript-analysis] Outbound voicebot + call transcript pipeline; both depend on dialer-bridge events (owner Santosh).
+[dialer-bridge · Node] Connectivity & dialer — call events + transcripts producer. Known gap: pre-connect drops still trigger disposition modal.
+[renewals] Life Renewal Solutioning v1 on Phoenix — OPEN: bucket definitions, disposition framework fit, listing-column UX, MIS-vs-API scope contradiction. BU sync pending.
+[claims-endorsement] Endorsement/Claims/Ticketing — BMSTICKET queue (assignee Shiva Mehta).
+[SLACK] #phoenix-dev #pbp-product #posp-escalations indexed. [JIRA] PHOEN, POSP, PBPAR, PD fully indexed (live list below).
+TEAM: Rajiv (lead) — Deepanshu, Sachin, Akash, Aman, Amit, Abhishek, Ankush. PM: Vishal.
+CONVENTIONS: dispositions mandatory; minimize per-row CTAs; single-submit flows; reusable copy over vertical-specific.
+
+LIVE JIRA INDEX (200 most recently updated, synced via Rovo MCP):
+` + JIRA_CTX;
+
+const DOCS = [
+  { id: "phoenix", tag: "phoenix-web · phoenix-api", title: "Phoenix CRM", fresh: "indexed 2h ago · 0 commits behind",
+    one: "VRM/SVRM workbench for the POSP ecosystem — the core surface most features land on.",
+    body: `## Overview
+Web CRM used by VRMs/SVRMs to manage partner (POSP) relationships: calling queues, profiles, renewals, notifications and dispositions.
+## Modules & status
+- **Partner 360** — PHOEN-84, in dev. Single partner view: profile, NOP/MIS trends, contact data.
+- **Calling Campaign Engine v1.1** — PHOEN-85. Bucket-based queues; assigns partners to VRMs.
+- **Renewal redirect (Unify → Partner360)** — PHOEN-83. Live for motor.
+- **Notification panel** — PHOEN-82. Quote lifecycle events surfaced in-app.
+- **Bottoms-up planning for VRMs** — PHOEN-81.
+## Known gaps
+- 15-min call SLA is tracked but there is **no proactive breach alert** — a 12-min warning is on the horizon, solution direction pending alignment.
+- Pre-connect dialer drops still open the disposition modal (see dialer-bridge).
+## Owners
+Tech lead **Rajiv**; devs Deepanshu, Sachin, Akash, Aman, Amit, Abhishek, Ankush. PM **Vishal**.` },
+
+  { id: "p360", tag: "partner-profile-service", title: "Partner 360", fresh: "indexed 2h ago",
+    one: "Single-pane partner view inside Phoenix — profile, trends, contactability.",
+    body: `## Overview
+One screen per partner: identity, book of business, NOP/MIS trend, contact data and recent interactions.
+## APIs
+- partner-profile-service — owner **Tanuj**. Monthly aggregates exposed for trend rendering.
+## Dependencies
+- Partner contact data sourcing tracked in POSP JIRAs with **Sandesh Singh** and **Ayush Batra**.
+## Conventions
+- Minimize per-row CTAs; prefer single-submit flows on edits.
+## Open items
+- 6-month NOP sparkline next to the partner header is drafted but not solutioned.` },
+
+  { id: "campaign", tag: "campaign-engine", title: "Calling Campaign Engine v1.1", fresh: "indexed 2h ago",
+    one: "Bucket-based queueing that decides which partner a VRM calls next.",
+    body: `## Overview
+Distributes partners into buckets (UI navigation pattern) and assigns calls to VRM queues. PHOEN-85.
+## SLA
+- Per-call SLA is **15 minutes**, tracked post-facto in MIS.
+- No real-time breach warning exists; a proactive **12-minute** banner on the active-call screen is the requested behaviour.
+## Interactions
+- Emits call lifecycle to disposition-service; consumes dialer-bridge connect events.
+## Open items
+- SLA alert solution direction pending alignment before JIRA creation.` },
+
+  { id: "dispo", tag: "disposition-service", title: "Disposition Framework", fresh: "indexed 2h ago",
+    one: "Mandatory L1/L2 outcome capture after every partner call.",
+    body: `## Overview
+Every call must end in a disposition. The post-call modal is **unclosable** until submitted; records are write-once per call.
+## Taxonomy
+- L1 categories with L2 reasons underneath (e.g. Not Connected → busy / no answer).
+## Known issues
+- Ops misfiles switched-off phones — an L2 "Partner unreachable – switched off" is drafted.
+- Pre-connect system drops should auto-dispose as "System Drop" instead of prompting the VRM.` },
+
+  { id: "pbpmitra", tag: "pbpmitra-app", title: "PBPMitra", fresh: "indexed 3h ago",
+    one: "The partner-facing mobile app — tickets, endorsements, commissions.",
+    body: `## Overview
+Flutter app for POSPs. Primary self-serve surface on the partner side.
+## Capabilities
+- **Ticketing** — open + track; flow stakeholder **Asmit**.
+- **Endorsement status** — view-only today.
+- **Commission view**.
+## Deferred
+- Web interface for VRM chat notifications — third scenario, not yet specced.` },
+
+  { id: "amigo", tag: "amigo-core", title: "Amigo Bot", fresh: "indexed 3h ago",
+    one: "AI assistant answering partner queries inside the app.",
+    body: `## Overview
+Python service handling partner intents: policy info, commission, ticket status.
+## Telemetry
+- Latency metrics are emitted, but the **calculation methodology is undocumented** — prior write-up predates searchable history.
+## Open items
+- Re-derive and document latency methodology; decide P50/P95 reporting.` },
+
+  { id: "voice", tag: "voicebot · transcript-analysis", title: "Voicebot & Transcript Analysis", fresh: "indexed 4h ago",
+    one: "Outbound automated calling plus the transcript intelligence pipeline.",
+    body: `## Overview
+Voicebot places/handles outbound partner calls; transcript-analysis consumes call audio + text for QA and insight.
+## Dependencies
+- Both ride on **dialer-bridge** events and media — dependency owner **Santosh**.
+## Notes
+- Transcript coverage follows dialer integration coverage; gaps upstream become blind spots downstream.` },
+
+  { id: "dialer", tag: "dialer-bridge", title: "Connectivity & Dialer", fresh: "indexed 4h ago",
+    one: "The bridge between telephony and everything else.",
+    body: `## Overview
+Node service pushing call events and transcripts from the dialer into Phoenix and the analysis pipeline.
+## Known gap
+- Calls dropped **before connect** still trigger the VRM disposition modal — should emit a System Drop auto-disposition instead.
+## Owner
+- Integration dependency owner: **Santosh**.` },
+
+  { id: "renewal", tag: "renewals", title: "Renewals & Life Renewal v1", fresh: "indexed 2h ago",
+    one: "Renewal journeys on Phoenix — motor live, life in solutioning.",
+    body: `## Overview
+Unify → Partner360 renewal redirect is **live for motor** (PHOEN-83). Life Renewal Solutioning v1 is in requirements clarification.
+## Open questions (Life v1)
+- Bucket definitions for renewal stages.
+- Disposition framework fit for renewal calls.
+- Listing-column UX on the renewal grid.
+- **MIS vs API scope contradiction** — needs BU confirmation.
+## Status
+- Structured clarification doc prepared; BU sync awaited.` },
+
+  { id: "claims", tag: "claims-endorsement", title: "Endorsement · Claims · Ticketing", fresh: "indexed 5h ago",
+    one: "Cross-surface service operations for partners and customers.",
+    body: `## Overview
+Endorsement, claims and ticketing flows spanning PBPMitra and internal queues.
+## Queues
+- **BMSTICKET** — current assignee **Shiva Mehta**.
+## Notes
+- Ticket + endorsement signals are candidate inputs for proactive CJ work; today they are consumed reactively.` },
+];
+
+const DRAFTS_SEED = [
+  { id: 1, ch: "#phoenix-dev", who: "Vishal", when: "Tue 11:42", size: "S",
+    text: "VRMs need an SLA breach warning — banner on the active-call screen at the 12-minute mark (SLA is 15 min). Proactive, not post-facto MIS.", status: "new" },
+  { id: 2, ch: "#pbp-product", who: "Rajiv", when: "Tue 09:15", size: "M",
+    text: "Partner 360 should show a 6-month NOP trend sparkline next to the partner header. Tanuj's profile APIs may already return monthly aggregates.", status: "new" },
+  { id: 3, ch: "#posp-escalations", who: "Asmit", when: "Mon 18:03", size: "S",
+    text: "Disposition modal needs a new L2 under 'Not Connected' → 'Partner unreachable – switched off'. Ops keeps misfiling these.", status: "new" },
+  { id: 4, ch: "#phoenix-dev", who: "Santosh", when: "Mon 14:27", size: "M",
+    text: "When dialer drops a call before connect, Phoenix still opens the disposition modal. Should auto-dispose as 'System Drop' from dialer-bridge events.", status: "new" },
+];
+
+const KCHIPS = [
+  "What's in review right now across PBPAR?",
+  "Which PHOEN tickets are blocked and why might that be?",
+  "Is there any proactive SLA alerting on calls?",
+  "What's blocking Life Renewal solutioning?",
+];
+
+class Boundary extends Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(e) { return { err: e }; }
+  render() {
+    if (this.state.err) return (
+      <div className="err">This sheet hit a snag: {String((this.state.err && this.state.err.message) || this.state.err)}. Switch tabs to recover — your progress is kept.</div>
+    );
+    return this.props.children;
+  }
+}
+
+export default function Blueprint() {
+  const [tab, setTab] = useState("knowledge");
+  const [err, setErr] = useState(null);
+
+  const [kMsgs, setKMsgs] = useState([]);
+  const [kIn, setKIn] = useState("");
+  const [kBusy, setKBusy] = useState(false);
+
+  const [jp, setJp] = useState("ALL");
+  const [jq, setJq] = useState("");
+
+  const [doc, setDoc] = useState(null);
+  const [docQ, setDocQ] = useState("");
+
+  const [drafts, setDrafts] = useState(DRAFTS_SEED);
+  const [draft, setDraft] = useState(null);
+  const [sMsgs, setSMsgs] = useState([]);
+  const [sIn, setSIn] = useState("");
+  const [sBusy, setSBusy] = useState(false);
+
+  const [brd, setBrd] = useState(null);
+  const [brdBusy, setBrdBusy] = useState(false);
+  const [stories, setStories] = useState([]);
+  const [stBusy, setStBusy] = useState(false);
+  const [jiraBusy, setJiraBusy] = useState(false);
+
+  const [shipStory, setShipStory] = useState(null);
+  const [ship, setShip] = useState(null);
+  const [shipBusy, setShipBusy] = useState(false);
+
+  const kEnd = useRef(null), sEnd = useRef(null);
+  useEffect(() => { try { if (kEnd.current && typeof kEnd.current.scrollIntoView === "function") kEnd.current.scrollIntoView({ block: "end" }); } catch (e) {} }, [kMsgs.length, kBusy]);
+  useEffect(() => { try { if (sEnd.current && typeof sEnd.current.scrollIntoView === "function") sEnd.current.scrollIntoView({ block: "end" }); } catch (e) {} }, [sMsgs.length, sBusy]);
+
+  async function callOnce(messages, system) {
+    const body = { model: "claude-sonnet-4-20250514", max_tokens: 1000, messages };
+    if (system) body.system = system;
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    let d = null;
+    try { if (r && typeof r.json === "function") d = await r.json(); } catch (e) { d = null; }
+    if (!d && r && typeof r.text === "function") { try { d = JSON.parse(await r.text()); } catch (e) { d = null; } }
+    if (!d) throw new Error("Couldn't read the model response.");
+    if (d.error) throw new Error((d.error && d.error.message) || "API error");
+    return d;
+  }
+  async function callClaude(messages, system) {
+    let lastErr = null;
+    for (let a = 0; a < 3; a++) {
+      try { return await callOnce(messages, system); }
+      catch (e) {
+        lastErr = e;
+        const m = String((e && e.message) || e).toLowerCase();
+        const retriable = m.indexOf("internal") >= 0 || m.indexOf("overload") >= 0 || m.indexOf("busy") >= 0 || m.indexOf("rate") >= 0 || m.indexOf("read the model") >= 0 || m.indexOf("500") >= 0 || m.indexOf("529") >= 0 || m.indexOf("server") >= 0;
+        if (retriable && a < 2) { await new Promise(r => setTimeout(r, 900 * (a + 1))); continue; }
+        throw e;
+      }
+    }
+    throw lastErr;
+  }
+  const textOf = d => {
+    const c = (d && d.content) || [];
+    if (typeof c === "string") return c;
+    return c.filter(b => b && b.type === "text").map(b => b.text || "").join("\n").trim();
+  };
+  const stripJson = t => { const m = String(t).match(/\[[\s\S]*\]|\{[\s\S]*\}/); return m ? m[0] : t; };
+
+  /* ── knowledge ── */
+  async function askK(q) {
+    const question = String(q != null ? q : kIn).trim(); if (!question || kBusy) return;
+    setErr(null); setKIn("");
+    const next = [...kMsgs, { role: "user", content: question }];
+    setKMsgs(next); setKBusy(true);
+    try {
+      const d = await callClaude(next.slice(-8).map(m => ({ role: m.role, content: m.content })),
+        "You are Blueprint, Policybazaar's internal knowledge layer. Answer ONLY from the indexed sources below, including the live JIRA index. Be concrete and brief (under 120 words). Cite JIRA keys / repo / doc names you draw from. If something is not indexed, say so plainly.\n" + CODEBASE);
+      setKMsgs(m => [...m, { role: "assistant", content: textOf(d) || "(empty response — try again)" }]);
+    } catch (e) { setErr(e.message); setKMsgs(m => m.slice(0, -1)); }
+    setKBusy(false);
+  }
+
+  /* ── solutioning ── */
+  function startSolutioning(dr) {
+    setDraft(dr); setSMsgs([]); setBrd(null); setStories([]); setShip(null); setShipStory(null);
+    setDrafts(ds => ds.map(x => x.id === dr.id ? { ...x, status: "solutioning" } : x));
+    setTab("solution"); kickoff(dr);
+  }
+  async function kickoff(dr) {
+    setSBusy(true); setErr(null);
+    try {
+      const d = await callClaude(
+        [{ role: "user", content: "New requirement from " + dr.who + " in " + dr.ch + ': "' + dr.text + '"\nValidate it against what is already built and the live JIRA index — call out any existing or overlapping tickets by key. Name the exact services touched and ask me the 2-3 sharpest open questions. Under 140 words.' }],
+        "You are Blueprint's solutioning engine for Policybazaar. Ground every claim in the indexed sources and live JIRA index. Crisp, no fluff.\n" + CODEBASE);
+      setSMsgs([{ role: "assistant", content: textOf(d) || "(empty response — try again)" }]);
+    } catch (e) { setErr(e.message); }
+    setSBusy(false);
+  }
+  async function askS() {
+    const t = sIn.trim(); if (!t || sBusy || !draft) return;
+    setErr(null); setSIn("");
+    const next = [...sMsgs, { role: "user", content: t }];
+    setSMsgs(next); setSBusy(true);
+    try {
+      const d = await callClaude(next.slice(-8).map(m => ({ role: m.role, content: m.content })),
+        'You are Blueprint\'s solutioning engine. Requirement under discussion: "' + draft.text + '". Ground answers in the indexed sources and live JIRA index; converge toward a closed solution. Under 120 words.\n' + CODEBASE);
+      setSMsgs(m => [...m, { role: "assistant", content: textOf(d) || "(empty response — try again)" }]);
+    } catch (e) { setErr(e.message); setSMsgs(m => m.slice(0, -1)); }
+    setSBusy(false);
+  }
+  async function genBrd() {
+    if (brdBusy || !draft) return; setBrdBusy(true); setErr(null);
+    try {
+      const transcript = sMsgs.map(m => (m.role === "user" ? "PM: " : "Blueprint: ") + m.content).join("\n");
+      const d = await callClaude(
+        [{ role: "user", content: 'Solutioning is closed for: "' + draft.text + '"\nTranscript:\n' + transcript + "\n\nWrite the BRD now." }],
+        "Write a concise BRD in markdown for Policybazaar's Phoenix/POSP stack. Sections exactly: ## Objective, ## Background, ## Scope, ## User Stories (bullets, As a...), ## Acceptance Criteria (bullets), ## Out of Scope, ## Dependencies (reference related JIRA keys where relevant), ## Success Metrics. Ground in:\n" + CODEBASE);
+      const out = textOf(d);
+      if (!out) throw new Error("Empty BRD — try again.");
+      setBrd(out);
+      setDrafts(ds => ds.map(x => x.id === draft.id ? { ...x, status: "brd" } : x));
+      setTab("brd");
+    } catch (e) { setErr(e.message); }
+    setBrdBusy(false);
+  }
+  async function genStories() {
+    if (stBusy || !brd) return; setStBusy(true); setErr(null);
+    try {
+      const d = await callClaude(
+        [{ role: "user", content: "BRD:\n" + brd + '\n\nBreak into 2-4 dev stories. Respond with ONLY a JSON array: [{"title":"...","description":"one line","ac":"key acceptance criterion","size":"S|M"}] — no prose, no fences.' }],
+        "You split BRDs into small, shippable JIRA stories. JSON only.");
+      const arr = JSON.parse(stripJson(textOf(d)));
+      if (!Array.isArray(arr) || !arr.length) throw new Error("No stories parsed.");
+      setStories(arr.map((s, i) => ({ title: s.title || "Story", description: s.description || "", ac: s.ac || "", size: s.size === "M" ? "M" : "S", id: i, key: null, state: "ready" })));
+      setTab("jira");
+    } catch (e) { setErr("Couldn't parse stories — try again. " + e.message); }
+    setStBusy(false);
+  }
+  async function pushJira() {
+    if (jiraBusy || !stories.length) return; setJiraBusy(true); setErr(null);
+    for (let i = 0; i < stories.length; i++) {
+      await new Promise(r => setTimeout(r, 650));
+      setStories(st => st.map(s => s.id === i ? { ...s, key: "POSP-" + (1041 + i), state: "created" } : s));
+    }
+    setDrafts(ds => ds.map(x => draft && x.id === draft.id ? { ...x, status: "jira" } : x));
+    setJiraBusy(false);
+  }
+
+  /* ── ship ── */
+  async function selfShip(story) {
+    if (shipBusy) return;
+    setShipStory(story); setShip(null); setShipBusy(true); setErr(null); setTab("ship");
+    try {
+      const d = await callClaude(
+        [{ role: "user", content: "Story: " + story.title + " — " + story.description + " (AC: " + story.ac + "). Stack context:\n" + CODEBASE.slice(0, 2400) + '\nGenerate the minimal change. Respond ONLY with JSON, no fences: {"summary":"one line","files":[{"path":"repo/path/File.ext","diff":["- old line","+ new line"]}],"tests":[{"name":"test name","pass":true}],"frontend":true,"preview":{"screen":"Phoenix · Active Call","kind":"banner|modal|list","title":"short heading","text":"banner text if kind=banner","items":["item 1","item 2"],"highlight":"the new or changed item text"}} . Rules: 1-2 files, 4-8 diff lines each, 3 tests. Set frontend=false and omit preview if the change touches no UI. For kind=modal or list give 3-5 short items where one is the new/changed one, repeated exactly in highlight.' }],
+        "You are Blueprint's cloud coding agent. Plausible, minimal, production-shaped diffs for the Phoenix stack. JSON only.");
+      const obj = JSON.parse(stripJson(textOf(d)));
+      setShip({
+        summary: obj.summary || "Change generated",
+        files: Array.isArray(obj.files) ? obj.files : [],
+        tests: Array.isArray(obj.tests) ? obj.tests : [],
+        frontend: !!obj.frontend,
+        preview: obj.preview && typeof obj.preview === "object" ? obj.preview : null,
+        pr: 847 + (story.id || 0),
+      });
+      setDrafts(ds => ds.map(x => draft && x.id === draft.id ? { ...x, status: "shipped" } : x));
+    } catch (e) { setErr("Generation failed — try again. " + e.message); }
+    setShipBusy(false);
+  }
+
+  /* ── tiny markdown ── */
+  function Md({ text }) {
+    const bold = s => String(s).split(/\*\*(.+?)\*\*/g).map((p, j) => j % 2 ? <strong key={j}>{p}</strong> : p);
+    return <div>{String(text).split("\n").map((ln, i) => {
+      if (ln.indexOf("## ") === 0) return <h3 key={i} className="md-h">{ln.slice(3)}</h3>;
+      if (ln.indexOf("# ") === 0) return <h3 key={i} className="md-h">{ln.slice(2)}</h3>;
+      if (/^\s*[-*] /.test(ln)) return <div key={i} className="md-li"><span className="md-tick">—</span><span>{bold(ln.replace(/^\s*[-*] /, ""))}</span></div>;
+      if (!ln.trim()) return <div key={i} style={{ height: 8 }} />;
+      return <p key={i} className="md-p">{bold(ln)}</p>;
+    })}</div>;
+  }
+
+  /* ── sample UI preview for frontend changes ── */
+  function Preview({ p }) {
+    if (!p) return null;
+    const items = Array.isArray(p.items) ? p.items : [];
+    const hl = p.highlight || "";
+    const kind = p.kind === "modal" || p.kind === "list" ? p.kind : "banner";
+    return (
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: "#9FB4E6", marginBottom: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span className="pill" style={{ color: "#60D6A8" }}>sample preview</span>
+          Generated from the diff — not deployed.
+        </div>
+        <div className="mock">
+          <div className="mock-top">
+            <span className="mdot" /><span className="mdot" /><span className="mdot" />
+            <span style={{ marginLeft: 8 }}>{p.screen || "Phoenix"}</span>
+          </div>
+          <div className="mock-body">
+            {kind === "banner" && <>
+              <div className="mock-banner">⚠ {p.text || p.title || hl || "Alert"}</div>
+              <div className="mock-row"><div><div className="mock-name">Rakesh Traders · POSP</div><div className="mock-sub">Active call · 12:02</div></div><span className="mock-chip">on call</span></div>
+              <div className="mock-row dim"><div><div className="mock-name">Next: Sharma Insurance</div><div className="mock-sub">Bucket B2 · queued</div></div></div>
+            </>}
+            {kind !== "banner" && <>
+              {p.title && <div className="mock-name" style={{ marginBottom: 8 }}>{p.title}</div>}
+              <div className={kind === "modal" ? "mock-modal" : ""}>
+                {items.map((it, i) => {
+                  const isNew = hl && String(it).indexOf(hl) >= 0;
+                  return (
+                    <div key={i} className={"mock-opt" + (isNew ? " new" : "")}>
+                      <span className="mock-radio" />{it}
+                      {isNew && <span className="mock-new">NEW</span>}
+                    </div>
+                  );
+                })}
+                {kind === "modal" && <div className="mock-cta">Submit disposition</div>}
+              </div>
+            </>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const stages = [
+    { id: "knowledge", n: "01", label: "Knowledge", done: kMsgs.length > 0 },
+    { id: "docs", n: "02", label: "Docs", done: !!doc },
+    { id: "drafts", n: "03", label: "Drafts", done: drafts.some(d => d.status !== "new") },
+    { id: "solution", n: "04", label: "Solutioning", done: sMsgs.length > 0, lock: !draft },
+    { id: "brd", n: "05", label: "BRD", done: !!brd, lock: !brd && !sMsgs.length },
+    { id: "jira", n: "06", label: "JIRA", done: stories.some(s => s.state === "created"), lock: !stories.length && !brd },
+    { id: "ship", n: "07", label: "Ship", done: !!ship, lock: !stories.length },
+  ];
+  const statusTint = { new: "#7FA3FF", solutioning: "#FBBF24", brd: "#C4B5FD", jira: "#60D6A8", shipped: "#4ADE80" };
+  const statusWord = { new: "new", solutioning: "in solutioning", brd: "BRD ready", jira: "in JIRA", shipped: "shipped" };
+  const cur = stages.find(s => s.id === tab) || stages[0];
+  const docList = DOCS.filter(d => !docQ.trim() || (d.title + " " + d.one + " " + d.tag).toLowerCase().indexOf(docQ.toLowerCase()) >= 0);
+
+  const jTint = s => {
+    const x = String(s).toLowerCase();
+    if (/done|closed|release/.test(x)) return "#4ADE80";
+    if (/block/.test(x)) return "#F87171";
+    if (/await|draft|backlog|to-do|todo|requirement/.test(x)) return "#7FA3FF";
+    if (/progress|review|testing|qa|dev|design|html/.test(x)) return "#FBBF24";
+    return "#7FA3FF";
+  };
+  const PROJ = ["ALL", "PHOEN", "POSP", "PBPAR", "PD"];
+  const jiraList = JIRAS.filter(j => (jp === "ALL" || j.p === jp) && (!jq.trim() || (j.k + " " + j.t + " " + j.s + " " + j.a).toLowerCase().indexOf(jq.toLowerCase()) >= 0));
+  const projCount = p => JIRAS.filter(j => j.p === p).length;
+
+  const Dots = () => <span className="dots"><i /><i /><i /></span>;
+
+  return (
+    <div className="bp-root">
+      <style>{`
+        .bp-root{min-height:100vh;background:#0A1430;color:#E9EFFC;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;
+          background-image:linear-gradient(rgba(95,140,255,.075) 1px,transparent 1px),linear-gradient(90deg,rgba(95,140,255,.075) 1px,transparent 1px);
+          background-size:26px 26px;display:flex;flex-direction:column;}
+        .tb{display:flex;border-bottom:1.5px solid #2E4585;background:rgba(10,20,48,.94);position:sticky;top:0;z-index:9;}
+        .tb-cell{padding:10px 16px;border-right:1px solid #233763;display:flex;flex-direction:column;justify-content:center;}
+        .tb-k{font-family:ui-monospace,Menlo,monospace;font-size:9px;letter-spacing:.22em;color:#7FA3FF;text-transform:uppercase;}
+        .tb-v{font-size:13px;color:#E9EFFC;margin-top:2px;white-space:nowrap;}
+        .brand{display:flex;align-items:center;gap:10px;padding:8px 16px;border-right:1px solid #233763;}
+        .brand h1{font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:400;}
+        .body{display:flex;flex:1;min-height:0;}
+        .rail{width:208px;border-right:1.5px solid #2E4585;padding:18px 0;flex-shrink:0;}
+        .stage{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 18px;background:none;border:0;color:#8593B8;cursor:pointer;font-size:13.5px;border-left:3px solid transparent;font-family:inherit;}
+        .stage:hover{color:#C9D6F5;}
+        .stage.on{color:#fff;border-left-color:#1268FB;background:linear-gradient(90deg,rgba(18,104,251,.16),transparent);}
+        .stage.lock{opacity:.38;cursor:not-allowed;}
+        .stage .n{font-family:ui-monospace,monospace;font-size:10px;color:#5E72A8;}
+        .stage.on .n{color:#7FA3FF;}
+        .tick{margin-left:auto;color:#4ADE80;font-size:11px;}
+        .main{flex:1;min-width:0;display:flex;flex-direction:column;padding:26px 30px;overflow-y:auto;}
+        .sheet-t{font-family:Georgia,serif;font-size:24px;font-weight:400;margin-bottom:4px;}
+        .sheet-s{color:#8593B8;font-size:13px;margin-bottom:18px;max-width:680px;line-height:1.5;}
+        .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+        .chip{font-size:12px;padding:7px 12px;border:1px solid #2E4585;border-radius:999px;background:rgba(18,104,251,.08);color:#AFC4F2;cursor:pointer;font-family:inherit;}
+        .chip:hover{border-color:#1268FB;color:#fff;}
+        .chip.on{border-color:#1268FB;color:#fff;background:rgba(18,104,251,.25);}
+        .feed{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:12px;min-height:120px;}
+        .msg{max-width:80%;padding:11px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;}
+        .msg.u{align-self:flex-end;background:#1268FB;color:#fff;border-bottom-right-radius:3px;}
+        .msg.a{align-self:flex-start;background:rgba(20,34,72,.85);border:1px solid #2E4585;border-bottom-left-radius:3px;}
+        .ask{display:flex;gap:9px;margin-top:8px;flex-wrap:wrap;}
+        .ask input{flex:1;min-width:180px;background:rgba(13,24,56,.9);border:1.5px solid #2E4585;border-radius:10px;padding:11px 14px;color:#fff;font-size:14px;outline:none;font-family:inherit;}
+        .ask input:focus{border-color:#1268FB;}
+        .btn{background:#1268FB;border:0;color:#fff;border-radius:10px;padding:11px 18px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+        .btn:disabled{opacity:.45;cursor:not-allowed;}
+        .btn.ghost{background:transparent;border:1.5px solid #2E4585;color:#AFC4F2;}
+        .btn.ghost:hover{border-color:#1268FB;color:#fff;}
+        .card{background:rgba(15,26,58,.85);border:1px solid #2E4585;border-radius:14px;padding:16px 18px;}
+        .draft + .draft{margin-top:12px;}
+        .d-meta{display:flex;gap:10px;align-items:center;font-family:ui-monospace,monospace;font-size:10.5px;color:#7FA3FF;letter-spacing:.06em;margin-bottom:7px;flex-wrap:wrap;}
+        .pill{padding:2.5px 9px;border-radius:999px;font-size:10px;border:1px solid currentColor;white-space:nowrap;}
+        .d-text{font-size:14px;line-height:1.55;color:#DCE6FB;margin-bottom:12px;}
+        .src{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+        .src span{font-family:ui-monospace,monospace;font-size:10.5px;padding:5px 10px;border:1px solid #2E4585;border-radius:6px;color:#9FB4E6;background:rgba(18,104,251,.07);}
+        .src b{color:#4ADE80;font-weight:400;margin-right:5px;}
+        .jrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(35,55,99,.55);font-size:12.5px;}
+        .jrow:last-child{border-bottom:0;}
+        .jkey{font-family:ui-monospace,monospace;font-size:11px;color:#7FA3FF;min-width:78px;}
+        .jtitle{flex:1;color:#D7E1F8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .jass{font-size:11px;color:#5E72A8;white-space:nowrap;}
+        .jlist{max-height:300px;overflow-y:auto;margin-top:4px;}
+        .md-h{font-family:Georgia,serif;font-size:16px;color:#AFC9FF;margin:14px 0 6px;font-weight:400;border-bottom:1px solid #233763;padding-bottom:4px;}
+        .md-p{font-size:13.5px;line-height:1.6;color:#D7E1F8;margin:3px 0;}
+        .md-li{display:flex;gap:9px;font-size:13.5px;line-height:1.6;color:#D7E1F8;margin:2px 0;}
+        .md-tick{color:#1268FB;flex-shrink:0;}
+        .doc{cursor:pointer;transition:border-color .12s;}
+        .doc:hover{border-color:#1268FB;}
+        .doc + .doc{margin-top:11px;}
+        .doc-t{font-family:Georgia,serif;font-size:17px;margin-bottom:3px;}
+        .doc-tag{font-family:ui-monospace,monospace;font-size:10px;color:#7FA3FF;letter-spacing:.06em;}
+        .doc-one{font-size:12.5px;color:#9FB4E6;margin-top:5px;line-height:1.5;}
+        .fresh{font-family:ui-monospace,monospace;font-size:9.5px;color:#4ADE80;margin-left:auto;white-space:nowrap;}
+        .story{display:flex;align-items:flex-start;gap:13px;}
+        .story + .story{margin-top:11px;}
+        .key{font-family:ui-monospace,monospace;font-size:11px;color:#4ADE80;border:1px solid rgba(74,222,128,.4);border-radius:6px;padding:3px 8px;white-space:nowrap;}
+        .key.wait{color:#7FA3FF;border-color:#2E4585;}
+        .diff{font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.65;background:#091126;border:1px solid #233763;border-radius:10px;padding:12px 14px;overflow-x:auto;margin-top:8px;}
+        .diff .add{color:#4ADE80;} .diff .del{color:#F87171;} .diff .pathline{color:#7FA3FF;margin-bottom:3px;}
+        .test{display:flex;align-items:center;gap:9px;font-size:13px;padding:6px 0;color:#CFE0FF;}
+        .mock{background:#F4F7FF;border-radius:12px;overflow:hidden;border:1px solid #2E4585;max-width:430px;}
+        .mock-top{background:#1268FB;color:#fff;padding:8px 12px;font-size:11px;display:flex;align-items:center;gap:5px;font-family:ui-monospace,monospace;}
+        .mdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45);display:inline-block;}
+        .mock-body{padding:14px;color:#16224A;}
+        .mock-banner{background:#FFF1D6;border:1px solid #F0A325;color:#7A4D00;padding:10px 12px;border-radius:8px;font-weight:700;font-size:13px;margin-bottom:12px;}
+        .mock-row{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #DCE5F8;border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+        .mock-row.dim{opacity:.55;}
+        .mock-name{font-size:13px;font-weight:700;}
+        .mock-sub{font-size:11px;color:#5E72A8;margin-top:2px;}
+        .mock-chip{font-size:10px;background:#E7F8EE;color:#0E7A45;border-radius:999px;padding:3px 9px;font-weight:700;}
+        .mock-modal{background:#fff;border:1px solid #DCE5F8;border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(22,34,74,.12);}
+        .mock-opt{display:flex;align-items:center;gap:9px;font-size:13px;padding:9px 10px;border:1px solid #E3EAF9;border-radius:8px;margin-bottom:7px;background:#fff;}
+        .mock-opt.new{border:1.5px solid #1268FB;background:#F0F5FF;font-weight:700;}
+        .mock-radio{width:13px;height:13px;border-radius:50%;border:2px solid #9FB4E6;flex-shrink:0;display:inline-block;}
+        .mock-new{margin-left:auto;font-size:9px;background:#1268FB;color:#fff;border-radius:999px;padding:2px 8px;font-weight:800;letter-spacing:.08em;}
+        .mock-cta{background:#1268FB;color:#fff;text-align:center;border-radius:8px;padding:10px;font-size:13px;font-weight:700;margin-top:4px;opacity:.92;}
+        .dots i{display:inline-block;width:5px;height:5px;border-radius:50%;background:#7FA3FF;margin-right:4px;animation:bp-b 1s infinite;}
+        .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+        @keyframes bp-b{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+        .err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.45);color:#FCA5A5;font-size:12.5px;border-radius:10px;padding:9px 13px;margin-bottom:12px;}
+        @media(max-width:880px){.rail{width:100%;display:flex;overflow-x:auto;border-right:0;border-bottom:1.5px solid #2E4585;padding:0;}
+          .body{flex-direction:column;}.stage{border-left:0;border-bottom:3px solid transparent;white-space:nowrap;width:auto;}
+          .stage.on{border-bottom-color:#1268FB;}.tb-cell.hide{display:none;}.main{padding:18px 16px;}.msg{max-width:92%;}}
+      `}</style>
+
+      <header className="tb">
+        <div className="brand">
+          <svg width="34" height="34" viewBox="0 0 60 60"><circle cx="30" cy="30" r="29" fill="#1268FB" /><text x="30" y="40" textAnchor="middle" fontFamily="Georgia,serif" fontSize="30" fill="#fff">bp</text></svg>
+          <h1>Blueprint</h1>
+        </div>
+        <div className="tb-cell"><span className="tb-k">Project</span><span className="tb-v">Phoenix · POSP</span></div>
+        <div className="tb-cell hide"><span className="tb-k">Team</span><span className="tb-v">Push to Production</span></div>
+        <div className="tb-cell hide"><span className="tb-k">Sheet</span><span className="tb-v">{cur.n} — {cur.label}</span></div>
+        <div className="tb-cell" style={{ marginLeft: "auto", borderRight: 0, borderLeft: "1px solid #233763" }}><span className="tb-k">Rev</span><span className="tb-v">C · Hackathon</span></div>
+      </header>
+
+      <div className="body">
+        <nav className="rail">
+          {stages.map(s => (
+            <button key={s.id} className={"stage " + (tab === s.id ? "on " : "") + (s.lock ? "lock" : "")}
+              onClick={() => { if (!s.lock) setTab(s.id); }}>
+              <span className="n">{s.n}</span>{s.label}{s.done && <span className="tick">✓</span>}
+            </button>
+          ))}
+        </nav>
+
+        <main className="main">
+          <Boundary>
+            {err && <div className="err">{err}</div>}
+
+            {/* 01 KNOWLEDGE */}
+            {tab === "knowledge" && <>
+              <div className="sheet-t">Ask the codebase</div>
+              <div className="sheet-s">Everything indexed — repos, services, Slack, and a live JIRA index of {JIRAS.length} issues synced via Rovo MCP across PHOEN · POSP · PBPAR · PD.</div>
+              <div className="src">
+                <span><b>●</b>phoenix-web</span><span><b>●</b>phoenix-api</span><span><b>●</b>pbpmitra-app</span>
+                <span><b>●</b>amigo-core</span><span><b>●</b>voicebot</span><span><b>●</b>dialer-bridge</span>
+                <span><b>●</b>Slack ×3</span><span><b>●</b>JIRA ×{JIRAS.length}</span>
+              </div>
+
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                  <span style={{ fontFamily: "Georgia,serif", fontSize: 15 }}>Live JIRA index</span>
+                  <span className="pill" style={{ color: "#60D6A8" }}>synced · Rovo MCP</span>
+                  <span style={{ fontSize: 11, color: "#5E72A8", marginLeft: "auto" }}>{jiraList.length} shown</span>
+                </div>
+                <div className="chips" style={{ marginBottom: 8 }}>
+                  {PROJ.map(p => <button key={p} className={"chip " + (jp === p ? "on" : "")} onClick={() => setJp(p)}>{p}{p !== "ALL" ? " · " + projCount(p) : " · " + JIRAS.length}</button>)}
+                </div>
+                <div className="ask" style={{ marginTop: 0 }}>
+                  <input value={jq} onChange={e => setJq(e.target.value)} placeholder="Filter issues — try renewal, blocked, partner 360…" />
+                </div>
+                <div className="jlist">
+                  {jiraList.slice(0, 60).map(j => (
+                    <div key={j.k} className="jrow">
+                      <span className="jkey">{j.k}</span>
+                      <span className="jtitle">{j.t}</span>
+                      <span className="jass">{j.a !== "—" ? j.a : ""}</span>
+                      <span className="pill" style={{ color: jTint(j.s) }}>{j.s}</span>
+                    </div>
+                  ))}
+                  {jiraList.length > 60 && <div style={{ fontSize: 11, color: "#5E72A8", padding: "8px 0" }}>+ {jiraList.length - 60} more — refine the filter, or just ask below.</div>}
+                  {jiraList.length === 0 && <div style={{ fontSize: 12, color: "#5E72A8", padding: "8px 0" }}>No issues match.</div>}
+                </div>
+              </div>
+
+              {kMsgs.length === 0 && <div className="chips">{KCHIPS.map(c => <button key={c} className="chip" onClick={() => askK(c)}>{c}</button>)}</div>}
+              <div className="feed">
+                {kMsgs.map((m, i) => <div key={i} className={"msg " + (m.role === "user" ? "u" : "a")}>{m.content}</div>)}
+                {kBusy && <div className="msg a"><Dots /></div>}
+                <div ref={kEnd} />
+              </div>
+              <div className="ask">
+                <input value={kIn} onChange={e => setKIn(e.target.value)} onKeyDown={e => { if (e.key === "Enter") askK(); }} placeholder="e.g. which PD tickets are awaiting QA?" />
+                <button className="btn" onClick={() => askK()} disabled={kBusy || !kIn.trim()}>Ask</button>
+              </div>
+            </>}
+
+            {/* 02 DOCS */}
+            {tab === "docs" && <>
+              {!doc ? <>
+                <div className="sheet-t">Living documentation</div>
+                <div className="sheet-s">Auto-generated from every connected repo and kept current on each push. {DOCS.length} documents across the PBPartners portfolio.</div>
+                <div className="ask" style={{ marginTop: 0, marginBottom: 16 }}>
+                  <input value={docQ} onChange={e => setDocQ(e.target.value)} placeholder="Filter docs — try renewal, dialer, amigo…" />
+                </div>
+                {docList.map(d => (
+                  <div key={d.id} className="card doc" onClick={() => setDoc(d)}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+                      <div>
+                        <div className="doc-tag">{d.tag}</div>
+                        <div className="doc-t">{d.title}</div>
+                      </div>
+                      <span className="fresh">{d.fresh}</span>
+                    </div>
+                    <div className="doc-one">{d.one}</div>
+                  </div>
+                ))}
+                {docList.length === 0 && <div className="sheet-s">No docs match that filter.</div>}
+              </> : <>
+                <button className="btn ghost" style={{ alignSelf: "flex-start", marginBottom: 14 }} onClick={() => setDoc(null)}>← All docs</button>
+                <div className="doc-tag">{doc.tag} · <span style={{ color: "#4ADE80" }}>{doc.fresh}</span></div>
+                <div className="sheet-t" style={{ marginTop: 2 }}>{doc.title}</div>
+                <div className="card" style={{ marginTop: 8 }}><Md text={doc.body} /></div>
+              </>}
+            </>}
+
+            {/* 03 DRAFTS */}
+            {tab === "drafts" && <>
+              <div className="sheet-t">Requirement drafts from Slack</div>
+              <div className="sheet-s">Messages captured from indexed channels, waiting to be solutioned. Slack is the note-taking surface; Blueprint is where they become real.</div>
+              {drafts.map(d => (
+                <div key={d.id} className="card draft">
+                  <div className="d-meta">
+                    <span>{d.ch}</span><span>{d.who}</span><span>{d.when}</span>
+                    <span className="pill" style={{ color: d.size === "S" ? "#4ADE80" : "#FBBF24" }}>{d.size === "S" ? "small" : "medium"}</span>
+                    <span className="pill" style={{ color: statusTint[d.status], marginLeft: "auto" }}>{statusWord[d.status]}</span>
+                  </div>
+                  <div className="d-text">{d.text}</div>
+                  <button className="btn ghost" onClick={() => startSolutioning(d)}>Start solutioning →</button>
+                </div>
+              ))}
+            </>}
+
+            {/* 04 SOLUTIONING */}
+            {tab === "solution" && <>
+              <div className="sheet-t">Solutioning</div>
+              {!draft ? <div className="sheet-s">Pick a draft from sheet 03 to begin.</div> : <>
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="d-meta"><span>{draft.ch}</span><span>{draft.who}</span></div>
+                  <div className="d-text" style={{ marginBottom: 0 }}>{draft.text}</div>
+                </div>
+                <div className="feed">
+                  {sMsgs.map((m, i) => <div key={i} className={"msg " + (m.role === "user" ? "u" : "a")}>{m.content}</div>)}
+                  {sBusy && <div className="msg a"><Dots /></div>}
+                  <div ref={sEnd} />
+                </div>
+                <div className="ask">
+                  <input value={sIn} onChange={e => setSIn(e.target.value)} onKeyDown={e => { if (e.key === "Enter") askS(); }} placeholder="Answer the open questions, refine the approach…" />
+                  <button className="btn ghost" onClick={askS} disabled={sBusy || !sIn.trim()}>Send</button>
+                  <button className="btn" onClick={genBrd} disabled={brdBusy || sMsgs.length === 0}>{brdBusy ? "Writing…" : "Close → BRD"}</button>
+                </div>
+              </>}
+            </>}
+
+            {/* 05 BRD */}
+            {tab === "brd" && <>
+              <div className="sheet-t">Business Requirement Document</div>
+              {!brd ? <div className="sheet-s">No BRD yet — close solutioning on sheet 04 first.</div> : <>
+                <div className="sheet-s">Generated from the closed solutioning thread, grounded in the indexed codebase and live JIRA index.</div>
+                <div className="card" style={{ marginBottom: 16 }}><Md text={brd} /></div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button className="btn" onClick={genStories} disabled={stBusy}>{stBusy ? "Splitting…" : "Break into JIRA stories →"}</button>
+                </div>
+              </>}
+            </>}
+
+            {/* 06 JIRA */}
+            {tab === "jira" && <>
+              <div className="sheet-t">Stories → JIRA</div>
+              {!stories.length ? <div className="sheet-s">Generate stories from the BRD on sheet 05.</div> : <>
+                <div className="sheet-s">Project POSP · type Task · <strong style={{ color: "#FBBF24" }}>demo build — keys are simulated, nothing is ever written to your JIRA.</strong></div>
+                <div className="card">
+                  {stories.map(s => (
+                    <div key={s.id} className="story">
+                      <span className={"key " + (s.state === "created" ? "" : "wait")}>{s.key || (jiraBusy ? "…" : "ready")}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{s.title} <span className="pill" style={{ color: s.size === "S" ? "#4ADE80" : "#FBBF24", marginLeft: 6 }}>{s.size}</span></div>
+                        <div style={{ fontSize: 12.5, color: "#9FB4E6", marginTop: 3 }}>{s.description} · <em>AC: {s.ac}</em></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "center" }}>
+                  <button className="btn" onClick={pushJira} disabled={jiraBusy || stories.every(s => s.state === "created")}>
+                    {jiraBusy ? "Creating…" : stories.every(s => s.state === "created") ? "Created ✓" : "Create in JIRA"}
+                  </button>
+                  {stories.every(s => s.state === "created") && <span className="pill" style={{ color: "#FBBF24" }}>simulated</span>}
+                  {stories.some(s => s.state === "created" && s.size === "S") &&
+                    <button className="btn ghost" onClick={() => setTab("ship")}>Self-ship the small one →</button>}
+                </div>
+              </>}
+            </>}
+
+            {/* 07 SHIP */}
+            {tab === "ship" && <>
+              <div className="sheet-t">Self-ship</div>
+              <div className="sheet-s">PM-triggered cloud coding for small stories. Blueprint generates the change with full context, runs tests, raises the PR. Frontend changes come with a sample UI preview. A developer reviews before anything merges.</div>
+              {!stories.length ? <div className="sheet-s">Create stories first (sheet 06).</div> : <>
+                <div className="chips">
+                  {stories.filter(s => s.size === "S").map(s => (
+                    <button key={s.id} className="chip" style={shipStory && shipStory.id === s.id ? { borderColor: "#1268FB" } : undefined}
+                      onClick={() => selfShip(s)} disabled={shipBusy}>⚡ {s.key || "story"} — {s.title}</button>
+                  ))}
+                  {stories.filter(s => s.size === "S").length === 0 && <span style={{ fontSize: 12.5, color: "#8593B8" }}>No small stories — self-ship is gated to size S.</span>}
+                </div>
+                {shipBusy && <div className="card"><Dots /> <span style={{ fontSize: 13, color: "#9FB4E6", marginLeft: 8 }}>Generating change with repo + BRD + story context…</span></div>}
+                {ship && <>
+                  <div className="card" style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{ship.summary}</div>
+                    {ship.files.map((f, i) => (
+                      <div key={i} className="diff">
+                        <div className="pathline">{f.path}</div>
+                        {(Array.isArray(f.diff) ? f.diff : []).map((ln, j) => <div key={j} className={String(ln).indexOf("+") === 0 ? "add" : String(ln).indexOf("-") === 0 ? "del" : ""}>{ln}</div>)}
+                      </div>
+                    ))}
+                  </div>
+                  {ship.frontend && ship.preview && <Preview p={ship.preview} />}
+                  <div className="card" style={{ marginBottom: 14 }}>
+                    {ship.tests.map((t, i) => <div key={i} className="test"><span style={{ color: t.pass ? "#4ADE80" : "#F87171" }}>{t.pass ? "✓" : "✗"}</span>{t.name}</div>)}
+                  </div>
+                  <div className="card" style={{ borderColor: "#1268FB", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                    <span className="key">PR #{ship.pr}</span>
+                    <div style={{ flex: 1, fontSize: 13.5, minWidth: 200 }}>Raised against <span style={{ fontFamily: "ui-monospace,monospace", color: "#AFC9FF" }}>phoenix-web</span> → <strong>awaiting dev review</strong>. Nothing merges without a human approval.</div>
+                    <span className="pill" style={{ color: "#FBBF24" }}>review pending</span>
+                  </div>
+                </>}
+              </>}
+            </>}
+          </Boundary>
+        </main>
+      </div>
+    </div>
+  );
+}
